@@ -18,13 +18,6 @@
 #include "hash.h"
 #include "lists.h"
 #define perror2(s,e) fprintf(stderr , "%s : %s \n",s,strerror(e))
-
-
-void * thread_server (void * newso  ) ;
-void perror_exit( char * message ) ;
-void sigchld_handler( int sig ) ;
-
-
 #define AUX_FILE "aux_file.bin"
 #define UPDATED_HSFILE "upd_hsfile.bin"
 #define HASH_TABLE_SIZE 103
@@ -61,7 +54,7 @@ typedef struct Needle{
 typedef struct NeedleIndex{
 	int		Id,		/* Needle unique ID */
 			status;
-			
+
 	long int	start_offset,	/* starts at in HayStack file */
 			end_offset;	/* ends at in HayStack file */
 }NeedleIndex;
@@ -74,10 +67,13 @@ struct sockaddr_in server ,client ;
 struct tm *current;
 time_t now;
 
+void * thread_server (void * newso  ) ;
+void perror_exit( char * message ) ;
+void sigchld_handler( int sig ) ;
 
 
 int main ( int argc , char * argv []) {
-	
+
 
 bin_nums bn;
 pthread_cond_init(&cvar,NULL);
@@ -101,8 +97,8 @@ Needle 		*needle;
 			*offset_file_d;		/* ID-Indexed auxiliary File with offsets(inside HayStack) for each Needle */
 
 	list_t	new_needle_index;
-	
-	
+
+
 	if(argc != 5){
 		fprintf(stderr, "Usage:\n\t %s -f <path_to_haystack_file> -p <port>\n", argv[0]);
 		exit(ARGS_ERROR);
@@ -122,7 +118,7 @@ Needle 		*needle;
 			strcpy(file_b,argv[i+1]);
 		}
 	}
-	
+
 	time(&now);
 	current = localtime(&now);
 	char * path = getwd(argv[2]);
@@ -130,17 +126,17 @@ Needle 		*needle;
 	t[strlen(t)-1] = '\0';
 	printf("[%s] Server is starting. Working directory: %s\n", t , path);
 	printf("[%s] Creating in-memory datastructures...\n", t);
-	
+
 	hash_init(&hashTable, HASH_TABLE_SIZE);
 	needle_index_list = list_create();
 
 if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonexistent */
 		hsfile_ok = 0;
 	}
-	
+
 	else{ /* file already exists */
 		/* is it a valid one ? */
-		fread(&bn, sizeof(struct bin_nums), 1, h_file_d);
+		fread(&bn, sizeof(bin_nums), 1, h_file_d);
 		if(ferror(h_file_d) != 0){
 			perror("fread");
 			exit(FILE_ERROR);
@@ -154,7 +150,7 @@ if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonex
 			hsfile_ok = 1;
 		}
 	}
-	
+
 	if(hsfile_ok){
 		/**************************************************
 		**********   	    BOOTSTRAPPING	***********
@@ -171,10 +167,10 @@ if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonex
 			perror("fopen");
 			exit(FILE_ERROR);
 		}
-		fwrite(&bn, sizeof(struct bin_nums), 1, upd_h_file_d);
+		fwrite(&bn, sizeof(bin_nums), 1, upd_h_file_d);
 		int nhayneedles = 0;
 		while(!feof(offset_file_d)){	/* for each ACTIVE needle in index file */
-			fread(&needle_index, sizeof(struct NeedleIndex), 1, offset_file_d);
+			fread(&needle_index, sizeof(NeedleIndex), 1, offset_file_d);
 			if(!feof(offset_file_d)){
 				nhayneedles++;
 				printf("Needle ID: %d\n", needle_index.Id);
@@ -194,7 +190,7 @@ if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonex
 				free(needle);
 
 				/* add needle_index in needle_index list */
-				if(list_push_front(&needle_index_list, &needle_index, sizeof(struct NeedleIndex)) == OUT_OF_MEMORY){
+				if(list_push_front(&needle_index_list, &needle_index, sizeof(NeedleIndex)) == OUT_OF_MEMORY){
 					fprintf(stderr, "Memory allocation problem!\n");
 					exit(MEM_ERROR);
 				}
@@ -230,9 +226,9 @@ if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonex
 		bn.mag_num=magic_number;
 		bn.next_id=0;
 		//fseek(h_file_d,sizeof(struct bin_nums), SEEK_SET);
-		fwrite(&bn, sizeof(struct bin_nums), 1, h_file_d);
+		fwrite(&bn, sizeof(bin_nums), 1, h_file_d);
 		fclose(h_file_d);
-	
+
 	}
 	time(&now);
 	current = localtime(&now);
@@ -252,19 +248,19 @@ if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonex
 	perror_exit ( "bind" ) ;
 	if ( listen ( sock , 5) < 0) perror_exit ( " listen " ) ;
 	printf ( "Listening for connection s to port %d .\n" , port ) ;
-	while (1) 
+	while (1)
 	{
 		signal ( SIGINT , sigchld_handler ) ;
 		sin_size = sizeof (client);
 		pthread_t *thread = (pthread_t *)malloc( sizeof(pthread_t) );
-		if (( newsock = accept ( sock , (struct sockaddr *) &client , &sin_size ) ) <= -1 ) 
+		if (( newsock = accept ( sock , (struct sockaddr *) &client , &sin_size ) ) <= -1 )
 			perror_exit ( "accept" ) ;
-		printf ( "Accepted connection .\n" ) ; 
+		printf ( "Accepted connection .\n" ) ;
 		pthread_create(thread, NULL , thread_server, ( void *) &newsock);
 		free(thread);
 	}
 
-return 0;	
+return 0;
 }
 
 
@@ -300,9 +296,9 @@ while (  bool == 0 )
 	putchar(buf[0]);
 	post=1;
 	}}}}
-	
+
 	////////////////////////
-	
+
 	else if(buf[0] == 'G'  && down==0){
 	read ( newsock , buf , 1);
 	putchar(buf[0]);
@@ -346,8 +342,8 @@ while (  bool == 0 )
 	down=1;
 	bool=1;
 	}}}}}}}}}
-	
-	
+
+
 	if(buf[0] == 'd'){
 	read ( newsock , buf , 1);
 	putchar(buf[0]);
@@ -380,7 +376,7 @@ while (  bool == 0 )
 	bad_delete=1;
 	printf("%s",delete_pin2);
 	}}}}}
-	
+
 
 	if ((buf[0] == 'h') && (post==1)){
 	read ( newsock , buf , 1);
@@ -399,8 +395,8 @@ while (  bool == 0 )
 	if(len==0)
 	lathos=1;
 	}}}
-		
-		
+
+
 	else if((buf[0] == '\n') && (post==1)){
 	read ( newsock , buf , 1);
 	putchar(buf[0]);
@@ -460,7 +456,7 @@ if((h_file_d = fopen(file_b, "r+b")) != NULL ){
 	needle_index.Id = counter;
 	needle_index.status = 1;
 	needle_index.start_offset = ftell(h_file_d);
-	needle = malloc(sizeof(struct Needle) - 1 + len + 1);
+	needle = malloc(sizeof(Needle) - 1 + len + 1);
 	needle->Id = counter;
 	needle->Status = 1;
 	needle->Size = len;
@@ -469,16 +465,16 @@ if((h_file_d = fopen(file_b, "r+b")) != NULL ){
 	{
 	needle->Data[meta]=	arxeio[meta];
 	}
-	fwrite(needle, sizeof(struct Needle) - 1 + len + 1, 1, h_file_d);
+	fwrite(needle, sizeof(Needle) - 1 + len + 1, 1, h_file_d);
 	free(needle);
 	needle_index.end_offset = ftell(h_file_d) - 1;
-	list_push_front(&needle_index_list, &needle_index, sizeof(struct NeedleIndex));
+	list_push_front(&needle_index_list, &needle_index, sizeof(NeedleIndex));
 	hash_index = getHashIndex(needle_index.Id, &hashTable);
 	new_needle_index = list_get_first_node(&needle_index_list);
 	add_in_hash(&hashTable, new_needle_index, hash_index);
 	fclose(h_file_d);
 	}
-	else 
+	else
 	servererror=1;
 	}
 pthread_mutex_unlock(&counter_lock) ;
@@ -541,7 +537,7 @@ if(((h_file_d = fopen(file_b, "rb")) != NULL) && (id_down >= 1)){
 		tmp = *collision_list;
 		do{
 			list_node_get_object(tmp, &ptr, sizeof(list_t));
-			list_node_get_object(ptr, &needle_index, sizeof(struct NeedleIndex));
+			list_node_get_object(ptr, &needle_index, sizeof(NeedleIndex));
 			if(needle_index.Id == id_down){
 				found = 1;
 				break;
@@ -565,7 +561,7 @@ if(((h_file_d = fopen(file_b, "rb")) != NULL) && (id_down >= 1)){
 		int strokdown2=sprintf(okdown2, "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n",needle->Size);
 
 		write ( newsock , &okdown2 , strokdown2);
-		
+
 		int pa=0,souma=0,pa1=0,phre=128,phre1=128;char souma_p[128];
 		if((needle->Size) >= 129)
 		{
@@ -595,7 +591,7 @@ if(((h_file_d = fopen(file_b, "rb")) != NULL) && (id_down >= 1)){
 pthread_mutex_unlock(&counter_lock) ;
 
 if(down == 1 && non_found_down == 1 ){
-printf("[%s] Client[%s] File with id : %d was not found .\n",t,IP_ptr,id_down);	
+printf("[%s] Client[%s] File with id : %d was not found .\n",t,IP_ptr,id_down);
 write ( newsock ,not_found_down,strnot_found_down);
 }
 
@@ -648,7 +644,7 @@ pthread_mutex_lock(&counter_lock) ;
                         prev = NULL;
                         do{
                                 list_node_get_object(tmp, &ptr, sizeof(list_t));
-                                list_node_get_object(ptr, &needle_index, sizeof(struct NeedleIndex));
+                                list_node_get_object(ptr, &needle_index, sizeof(NeedleIndex));
                                 if(needle_index.Id == id_delete){
                                         found = 1;
                                         break;
@@ -659,7 +655,7 @@ pthread_mutex_lock(&counter_lock) ;
                                 }
                         }while(needle_index.Id != id_delete && tmp != NULL);
                 }
-        
+
                 if(found){
                         needle_index_ptr = (NeedleIndex *)(ptr->data);
                         needle_index_ptr->status = 0;
@@ -671,7 +667,7 @@ pthread_mutex_lock(&counter_lock) ;
                         fwrite(needle, needle_index.end_offset - needle_index.start_offset + 1, 1,h_file_d);
                         //printf("ID: %d - Status: %d - Size: %d - Data: %s\n", needle->Id,needle->Status, needle->Size, needle->Data);
                         free(needle);
-                        remove_from_hash(&hashTable, index, prev); 
+                        remove_from_hash(&hashTable, index, prev);
                 }
                 fclose(h_file_d);
         }
@@ -754,12 +750,12 @@ if((offset_file_d = fopen(AUX_FILE, "w+b")) == NULL){
 
 	/* copy ACTIVE needle indexes from needle_index_list to HD */
 	while(!list_empty(needle_index_list)){
-		list_pop_front(&needle_index_list, &needle_index, sizeof(struct NeedleIndex));
+		list_pop_front(&needle_index_list, &needle_index, sizeof(NeedleIndex));
 		if(needle_index.status == 1){
-			fwrite(&needle_index, sizeof(struct NeedleIndex), 1, offset_file_d);
+			fwrite(&needle_index, sizeof(NeedleIndex), 1, offset_file_d);
 		}
 	}
-	
+
 	printf("[%s] Cleaning up...\n", t);
 
 	fclose(offset_file_d);
@@ -771,10 +767,10 @@ if((offset_file_d = fopen(AUX_FILE, "w+b")) == NULL){
 	}
 	bn.mag_num=magic_number;
 	bn.next_id=counter;
-	fwrite(&bn,sizeof(struct bin_nums),1,h_file_d);
+	fwrite(&bn,sizeof(bin_nums),1,h_file_d);
 	fclose(h_file_d);
 	pthread_mutex_unlock(&counter_lock) ;
-	
+
 	list_destroy(&needle_index_list);
 	hash_destroy(&hashTable);
 	free(file_b);
@@ -788,4 +784,3 @@ void perror_exit( char * message ) {
 	perror ( message ) ;
 	exit ( EXIT_FAILURE ) ;
 }
-
