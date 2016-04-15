@@ -17,7 +17,6 @@
 #include "bin_nums.h"
 #include "hash.h"
 #include "lists.h"
-#define perror2(s,e) fprintf(stderr , "%s : %s \n",s,strerror(e))
 #define AUX_FILE "aux_file.bin"
 #define UPDATED_HSFILE "upd_hsfile.bin"
 #define HASH_TABLE_SIZE 103
@@ -26,46 +25,16 @@
 #define FILE_ERROR 3
 
 
-const int magic_number = 666;
-
-
-int counter=0;
-int number_threads=0;
-char * file_b;
-
-
 pthread_mutex_t counter_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t number_threads_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cvar ;
-
-
-typedef struct Needle{
-
-	int	Id,
-		Status,
-		Size;
-
-	char 	Data[1];	/* a notorious technique that does work */
-				/* see memory allocation trick below */
-
-}Needle;
-
-typedef struct NeedleIndex{
-	int		Id,		/* Needle unique ID */
-			status;
-
-	long int	start_offset,	/* starts at in HayStack file */
-			end_offset;	/* ends at in HayStack file */
-}NeedleIndex;
-
 hash		hashTable;
 list_t		needle_index_list;	/* will hold needle_index items which are pointed by hash_index */
-
 struct sockaddr_in server ,client ;
-
 struct tm *current;
 time_t now;
+
 
 void * thread_server (void * newso  ) ;
 void perror_exit( char * message ) ;
@@ -73,47 +42,41 @@ void sigchld_handler( int sig ) ;
 
 
 int main ( int argc , char * argv []) {
+	bin_nums bn;
+	pthread_cond_init(&cvar,NULL);
+	int port , sock , newsock,true = 1,sin_size,i=1;
 
+	//struct sockaddr_in server ,client ;
+	socklen_t clientlen ;
+	struct sockaddr * clientptr =( struct sockaddr *) & client ;
+	char *t;
 
-bin_nums bn;
-pthread_cond_init(&cvar,NULL);
-int port , sock , newsock,true = 1,sin_size,i=1;
-//struct sockaddr_in server ,client ;
-socklen_t clientlen ;
-struct sockaddr * clientptr =( struct sockaddr *) & client ;
-char *t;
-
-int 		hash_index,
-			hsfile_ok;
+	int hash_index, hsfile_ok;
 
 	size_t		size;
-
-Needle 		*needle;
-
+	Needle 		*needle;
 	NeedleIndex	needle_index;
-
-	FILE 		*h_file_d,		/* Haystack File */
-			*upd_h_file_d,
-			*offset_file_d;		/* ID-Indexed auxiliary File with offsets(inside HayStack) for each Needle */
-
+	FILE 		*h_file_d,
+					/* Haystack File */
+					*upd_h_file_d,
+					*offset_file_d;
+					/* ID-Indexed auxiliary File with offsets(inside HayStack) for each Needle */
 	list_t	new_needle_index;
-
 
 	if(argc != 5){
 		fprintf(stderr, "Usage:\n\t %s -f <path_to_haystack_file> -p <port>\n", argv[0]);
 		exit(ARGS_ERROR);
 	}
-	for(i = 1; i < argc; i++)
-	{
-	if( strcmp(argv[i], "-p") == 0 )
-	{
-		if((port = atoi(argv[i+1])) == 0){
-			fprintf(stderr, "Usage:\n\t %s -f <path_to_haystack_file> -p <port>\n", argv[0]);
-			exit(ARGS_ERROR);
+
+	for(i = 1; i < argc; i++){
+		if( strcmp(argv[i], "-p") == 0 ) {
+			if((port = atoi(argv[i+1])) == 0) {
+				fprintf(stderr, "Usage:\n\t %s -f <path_to_haystack_file> -p <port>\n", argv[0]);
+				exit(ARGS_ERROR);
+			}
 		}
-		}
-		if( strcmp(argv[i], "-f") == 0 )
-		{
+
+		if( strcmp(argv[i], "-f") == 0 ) {
 			file_b=malloc((strlen(argv[i+1])+1)*sizeof(char));
 			strcpy(file_b,argv[i+1]);
 		}
@@ -130,7 +93,7 @@ Needle 		*needle;
 	hash_init(&hashTable, HASH_TABLE_SIZE);
 	needle_index_list = list_create();
 
-if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonexistent */
+	if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonexistent */
 		hsfile_ok = 0;
 	}
 
@@ -141,10 +104,12 @@ if((h_file_d = fopen(file_b, "rb")) == NULL){	/* First run - HayStack file nonex
 			perror("fread");
 			exit(FILE_ERROR);
 		}
+
 		if(magic_number != bn.mag_num){	/* nah, corrupted?? */
 			hsfile_ok = 0;
 			fclose(h_file_d);
 		}
+
 		else{
 			counter=bn.next_id;
 			hsfile_ok = 1;
@@ -270,7 +235,7 @@ int newsock = *(int *) a;
 FILE *h_file_d;
 char buf [1],length[1000000],down_pin[1000000],down_pin2[1000000],delete_pin[1000000],delete_pin2[1000000],*arxeio;
 int i=0,ii=0,len=0,post=0,bool=0,lathos=0,servererror=0,down=0,id_down=0,non_found_down=0,bad_down=0,iii=0,delete=0,id_delete=0,bad_delete=0;
-char *IP_ptr;char *t;
+char *IP_ptr, *t;
 IP_ptr = (char *)inet_ntoa(client.sin_addr) ;
 
 pthread_mutex_lock(&number_threads_lock);
