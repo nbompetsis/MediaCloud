@@ -14,8 +14,8 @@
 #define OUT_OF_MEMORY 1
 
 typedef struct hash{
-	int		size;	/* hash table size */
-	list_t * 	table;	/* hash table contains linked lists to handle collisions */
+	int	size;	/* hash table size */
+	list_t* table;	/* hash table contains linked lists to handle collisions */
 }hash;
 
 int hash_init(hash *, int);

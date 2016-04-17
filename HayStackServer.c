@@ -1,3 +1,4 @@
+/* C Programming Language Libraries*/
 #include <stdio.h>
 #include <sys/wait.h>
 #include <sys/types.h>
@@ -14,34 +15,40 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <string.h>
+/* Custom structures */
 #include "bin_nums.h"
 #include "hash.h"
 #include "lists.h"
+/* Definition of binary files */
 #define AUX_FILE "aux_file.bin"
 #define UPDATED_HSFILE "upd_hsfile.bin"
+/* Error codes */
 #define HASH_TABLE_SIZE 103
 #define MEM_ERROR 1
 #define ARGS_ERROR 2
 #define FILE_ERROR 3
 
-
+/* Thread mutex for locking the objects */
 pthread_mutex_t counter_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t number_threads_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cvar ;
-hash		hashTable;
-list_t		needle_index_list;	/* will hold needle_index items which are pointed by hash_index */
+
+/* Will hold needle_index items which are pointed by hash_index */
+hash hashTable;
+list_t	needle_index_list;
+
+/* Socket structures and time variables */
 struct sockaddr_in server ,client ;
 struct tm *current;
 time_t now;
 
+/* Prototypes Function */
+void * thread_server(void* newso);
+void perror_exit(char * message);
+void sigchld_handler(int sig);
 
-void * thread_server (void * newso  ) ;
-void perror_exit( char * message ) ;
-void sigchld_handler( int sig ) ;
-
-
-int main ( int argc , char * argv []) {
+int main(int argc, char* argv []){
 	bin_nums bn;
 	pthread_cond_init(&cvar,NULL);
 	int port , sock , newsock,true = 1,sin_size,i=1;
@@ -118,7 +125,7 @@ int main ( int argc , char * argv []) {
 
 	if(hsfile_ok){
 		/**************************************************
-		**********   	    BOOTSTRAPPING	***********
+		**********   	    BOOTSTRAPPING	        ***********
 		***************************************************
 		****** 1) Load index file in memory ***************
 		****** 2) Create hash for access in HayStack ******
